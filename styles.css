@@ -126,7 +126,7 @@ button:hover {
 .outlook {
   margin: 0;
   line-height: 1.6;
-  color: #e0e7ff;
+color: #e0e7ff;
 }
 
 .outlook--disabled {
