@@ -40,13 +40,17 @@ const buildChart = (container) => {
     wickUpColor: "#22c55e",
   };
 
-  const series = chart.addCandlestickSeries
-    ? chart.addCandlestickSeries(seriesOptions)
-    : chart.addSeries && window.LightweightCharts?.CandlestickSeries
-      ? chart.addSeries(window.LightweightCharts.CandlestickSeries, seriesOptions)
-      : chart.addSeries
-        ? chart.addSeries({ type: "Candlestick", ...seriesOptions })
-        : null;
+  let series = null;
+  if (typeof chart.addCandlestickSeries === "function") {
+    series = chart.addCandlestickSeries(seriesOptions);
+  } else if (
+    typeof chart.addSeries === "function" &&
+    window.LightweightCharts?.CandlestickSeries
+  ) {
+    series = chart.addSeries(window.LightweightCharts.CandlestickSeries, seriesOptions);
+  } else if (typeof chart.addSeries === "function") {
+    series = chart.addSeries({ type: "Candlestick", ...seriesOptions });
+  }
 
   return { chart, series };
 };
@@ -164,7 +168,7 @@ const bootstrapCharts = () => {
   ({ chart: longChart, series: longSeries } = buildChart(longChartContainer));
 
   if (!shortSeries || !longSeries) {
-    setStatus("Chart series could not be created. Update the chart library.");
+    setStatus("Chart series could not be created. Check the chart library version.");
     return;
   }
 
