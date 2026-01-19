@@ -1,14 +1,13 @@
-const form = document.querySelector("#symbol-form");
-const input = document.querySelector("#symbol-input");
-const summary = document.querySelector("#summary-text");
-const newsList = document.querySelector("#news-list");
-const outlook = document.querySelector("#outlook-text");
-const activeSymbol = document.querySelector("#active-symbol");
-const activeTime = document.querySelector("#active-time");
-const formError = document.querySelector("#form-error");
-
-const shortChartContainer = document.querySelector("#chart-short");
-const longChartContainer = document.querySelector("#chart-long");
+let form;
+let input;
+let summary;
+let newsList;
+let outlook;
+let activeSymbol;
+let activeTime;
+let formError;
+let shortChartContainer;
+let longChartContainer;
 
 let shortChart;
 let longChart;
@@ -16,7 +15,7 @@ let shortSeries;
 let longSeries;
 
 const buildChart = (container) => {
-  const chart = LightweightCharts.createChart(container, {
+  const chart = window.LightweightCharts.createChart(container, {
     height: 320,
     layout: {
       background: { color: "#0f172a" },
@@ -32,14 +31,22 @@ const buildChart = (container) => {
     },
   });
 
-  const series = chart.addCandlestickSeries({
+  const seriesOptions = {
     upColor: "#22c55e",
     downColor: "#f97316",
     borderDownColor: "#f97316",
     borderUpColor: "#22c55e",
     wickDownColor: "#f97316",
     wickUpColor: "#22c55e",
-  });
+  };
+
+  const series = chart.addCandlestickSeries
+    ? chart.addCandlestickSeries(seriesOptions)
+    : chart.addSeries && window.LightweightCharts?.CandlestickSeries
+      ? chart.addSeries(window.LightweightCharts.CandlestickSeries, seriesOptions)
+      : chart.addSeries
+        ? chart.addSeries({ type: "Candlestick", ...seriesOptions })
+        : null;
 
   return { chart, series };
 };
@@ -92,27 +99,10 @@ const generateCandles = ({
   return candles;
 };
 
-const determineOutlook = (candles) => {
-  if (!candles.length) return "No outlook available.";
-  const first = candles[0].open;
-  const last = candles[candles.length - 1].close;
-  const diff = ((last - first) / first) * 100;
-  if (diff > 1) {
-    return `Momentum is leaning bullish with prices up ${diff.toFixed(
-      2
-    )}% over the sample window, suggesting a higher chance of a steady climb this week.`;
-  }
-  if (diff < -1) {
-    return `Momentum is leaning bearish with prices down ${Math.abs(diff).toFixed(
-      2
-    )}% over the sample window, pointing to potential softness this week.`;
-  }
-  return `Momentum is mostly range-bound with prices within ${Math.abs(
-    diff
-  ).toFixed(2)}% of the start, so a sideways outcome is most likely this week.`;
-};
+const OUTLOOK_DISABLED_MESSAGE = "Weekly outlook is temporarily disabled.";
 
 const setStatus = (message = "") => {
+  if (!formError) return;
   formError.textContent = message;
 };
 
@@ -126,8 +116,6 @@ const updateUI = (symbol) => {
   summary.textContent = seedSummary(symbol);
   activeSymbol.textContent = symbol;
   activeTime.textContent = `Updated at ${formatUpdatedTime()}`;
-const updateUI = (symbol) => {
-  summary.textContent = seedSummary(symbol);
 
   const headlines = generateHeadlines(symbol);
   newsList.innerHTML = "";
@@ -154,16 +142,31 @@ const updateUI = (symbol) => {
     volatility: 2.8,
   });
 
-  outlook.textContent = determineOutlook(shortCandles);
+  outlook.textContent = OUTLOOK_DISABLED_MESSAGE;
 
-  shortSeries.setData(shortCandles);
-  longSeries.setData(longCandles);
+  if (shortSeries && longSeries) {
+    shortSeries.setData(shortCandles);
+    longSeries.setData(longCandles);
+  }
   setStatus("");
 };
 
 const bootstrapCharts = () => {
+  if (!window.LightweightCharts) {
+    setStatus("Charts are unavailable. Check your network or refresh the page.");
+    return;
+  }
+  if (!shortChartContainer || !longChartContainer) {
+    setStatus("Chart containers are missing. Refresh the page.");
+    return;
+  }
   ({ chart: shortChart, series: shortSeries } = buildChart(shortChartContainer));
   ({ chart: longChart, series: longSeries } = buildChart(longChartContainer));
+
+  if (!shortSeries || !longSeries) {
+    setStatus("Chart series could not be created. Update the chart library.");
+    return;
+  }
 
   window.addEventListener("resize", () => {
     shortChart.applyOptions({ width: shortChartContainer.clientWidth });
@@ -171,17 +174,40 @@ const bootstrapCharts = () => {
   });
 };
 
-bootstrapCharts();
-updateUI("AAPL");
+const init = () => {
+  form = document.querySelector("#symbol-form");
+  input = document.querySelector("#symbol-input");
+  summary = document.querySelector("#summary-text");
+  newsList = document.querySelector("#news-list");
+  outlook = document.querySelector("#outlook-text");
+  activeSymbol = document.querySelector("#active-symbol");
+  activeTime = document.querySelector("#active-time");
+  formError = document.querySelector("#form-error");
+  shortChartContainer = document.querySelector("#chart-short");
+  longChartContainer = document.querySelector("#chart-long");
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const symbol = input.value.trim().toUpperCase();
-  if (!symbol) {
-    setStatus("Enter a stock symbol to load insights.");
-    input.focus();
+  if (!form || !input || !summary || !newsList || !outlook) {
     return;
   }
-  if (!symbol) return;
-  updateUI(symbol);
-});
+
+  bootstrapCharts();
+  outlook.textContent = OUTLOOK_DISABLED_MESSAGE;
+  updateUI("AAPL");
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const symbol = input.value.trim().toUpperCase();
+    if (!symbol) {
+      setStatus("Enter a stock symbol to load insights.");
+      input.focus();
+      return;
+    }
+    updateUI(symbol);
+  });
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
