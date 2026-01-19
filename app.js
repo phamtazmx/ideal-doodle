@@ -1,13 +1,14 @@
-let form;
-let input;
-let summary;
-let newsList;
-let outlook;
-let activeSymbol;
-let activeTime;
-let formError;
-let shortChartContainer;
-let longChartContainer;
+const form = document.querySelector("#symbol-form");
+const input = document.querySelector("#symbol-input");
+const summary = document.querySelector("#summary-text");
+const newsList = document.querySelector("#news-list");
+const outlook = document.querySelector("#outlook-text");
+const activeSymbol = document.querySelector("#active-symbol");
+const activeTime = document.querySelector("#active-time");
+const formError = document.querySelector("#form-error");
+
+const shortChartContainer = document.querySelector("#chart-short");
+const longChartContainer = document.querySelector("#chart-long");
 
 let shortChart;
 let longChart;
@@ -15,7 +16,7 @@ let shortSeries;
 let longSeries;
 
 const buildChart = (container) => {
-  const chart = window.LightweightCharts.createChart(container, {
+  const chart = LightweightCharts.createChart(container, {
     height: 320,
     layout: {
       background: { color: "#0f172a" },
@@ -112,7 +113,6 @@ const determineOutlook = (candles) => {
 };
 
 const setStatus = (message = "") => {
-  if (!formError) return;
   formError.textContent = message;
 };
 
@@ -126,6 +126,8 @@ const updateUI = (symbol) => {
   summary.textContent = seedSummary(symbol);
   activeSymbol.textContent = symbol;
   activeTime.textContent = `Updated at ${formatUpdatedTime()}`;
+const updateUI = (symbol) => {
+  summary.textContent = seedSummary(symbol);
 
   const headlines = generateHeadlines(symbol);
   newsList.innerHTML = "";
@@ -154,22 +156,12 @@ const updateUI = (symbol) => {
 
   outlook.textContent = determineOutlook(shortCandles);
 
-  if (shortSeries && longSeries) {
-    shortSeries.setData(shortCandles);
-    longSeries.setData(longCandles);
-  }
+  shortSeries.setData(shortCandles);
+  longSeries.setData(longCandles);
   setStatus("");
 };
 
 const bootstrapCharts = () => {
-  if (!window.LightweightCharts) {
-    setStatus("Charts are unavailable. Check your network or refresh the page.");
-    return;
-  }
-  if (!shortChartContainer || !longChartContainer) {
-    setStatus("Chart containers are missing. Refresh the page.");
-    return;
-  }
   ({ chart: shortChart, series: shortSeries } = buildChart(shortChartContainer));
   ({ chart: longChart, series: longSeries } = buildChart(longChartContainer));
 
@@ -179,39 +171,17 @@ const bootstrapCharts = () => {
   });
 };
 
-const init = () => {
-  form = document.querySelector("#symbol-form");
-  input = document.querySelector("#symbol-input");
-  summary = document.querySelector("#summary-text");
-  newsList = document.querySelector("#news-list");
-  outlook = document.querySelector("#outlook-text");
-  activeSymbol = document.querySelector("#active-symbol");
-  activeTime = document.querySelector("#active-time");
-  formError = document.querySelector("#form-error");
-  shortChartContainer = document.querySelector("#chart-short");
-  longChartContainer = document.querySelector("#chart-long");
+bootstrapCharts();
+updateUI("AAPL");
 
-  if (!form || !input || !summary || !newsList || !outlook) {
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const symbol = input.value.trim().toUpperCase();
+  if (!symbol) {
+    setStatus("Enter a stock symbol to load insights.");
+    input.focus();
     return;
   }
-
-  bootstrapCharts();
-  updateUI("AAPL");
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const symbol = input.value.trim().toUpperCase();
-    if (!symbol) {
-      setStatus("Enter a stock symbol to load insights.");
-      input.focus();
-      return;
-    }
-    updateUI(symbol);
-  });
-};
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
+  if (!symbol) return;
+  updateUI(symbol);
+});
