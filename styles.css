@@ -129,11 +129,6 @@ button:hover {
   color: #e0e7ff;
 }
 
-.outlook--disabled {
-  color: #94a3b8;
-  font-style: italic;
-}
-
 .symbol-meta {
   display: flex;
   flex-direction: column;
