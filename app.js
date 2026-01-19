@@ -3,6 +3,9 @@ const input = document.querySelector("#symbol-input");
 const summary = document.querySelector("#summary-text");
 const newsList = document.querySelector("#news-list");
 const outlook = document.querySelector("#outlook-text");
+const activeSymbol = document.querySelector("#active-symbol");
+const activeTime = document.querySelector("#active-time");
+const formError = document.querySelector("#form-error");
 
 const shortChartContainer = document.querySelector("#chart-short");
 const longChartContainer = document.querySelector("#chart-long");
@@ -109,6 +112,20 @@ const determineOutlook = (candles) => {
   ).toFixed(2)}% of the start, so a sideways outcome is most likely this week.`;
 };
 
+const setStatus = (message = "") => {
+  formError.textContent = message;
+};
+
+const formatUpdatedTime = () =>
+  new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const updateUI = (symbol) => {
+  summary.textContent = seedSummary(symbol);
+  activeSymbol.textContent = symbol;
+  activeTime.textContent = `Updated at ${formatUpdatedTime()}`;
 const updateUI = (symbol) => {
   summary.textContent = seedSummary(symbol);
 
@@ -141,6 +158,7 @@ const updateUI = (symbol) => {
 
   shortSeries.setData(shortCandles);
   longSeries.setData(longCandles);
+  setStatus("");
 };
 
 const bootstrapCharts = () => {
@@ -159,6 +177,11 @@ updateUI("AAPL");
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const symbol = input.value.trim().toUpperCase();
+  if (!symbol) {
+    setStatus("Enter a stock symbol to load insights.");
+    input.focus();
+    return;
+  }
   if (!symbol) return;
   updateUI(symbol);
 });
