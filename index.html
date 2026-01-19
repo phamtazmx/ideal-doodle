@@ -36,6 +36,7 @@
           <h2>Active symbol</h2>
           <div class="symbol-meta">
             <span id="active-symbol">AAPL</span>
+            <span id="active-price">--</span>
             <span id="active-time">Updated just now</span>
           </div>
         </article>
@@ -56,9 +57,19 @@
 
         <article class="card" aria-live="polite">
           <h2>Weekly outlook</h2>
-          <p id="outlook-text" class="outlook outlook--disabled">
-            Weekly outlook is temporarily disabled.
+          <p id="outlook-text" class="outlook">
+            Enter a symbol to see the projected trading range and confidence for the week ahead.
           </p>
+        </article>
+
+        <article class="card" aria-live="polite">
+          <h2>Options interest</h2>
+          <p class="card-subhead">
+            Open interest increases (source: <a href="https://www.barchart.com/options/open-interest-change/increase" target="_blank" rel="noopener noreferrer">Barchart</a>)
+          </p>
+          <ul id="options-list" class="options-list">
+            <li>Loading open interest movers...</li>
+          </ul>
         </article>
       </section>
 

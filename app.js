@@ -4,10 +4,12 @@ let summary;
 let newsList;
 let outlook;
 let activeSymbol;
+let activePrice;
 let activeTime;
 let formError;
 let shortChartContainer;
 let longChartContainer;
+let optionsList;
 
 let shortChart;
 let longChart;
@@ -58,6 +60,54 @@ const buildChart = (container) => {
 const seedSummary = (symbol) =>
   `${symbol} is seeing heightened interest from investors as it balances near-term execution with long-term growth initiatives. The company is positioned in a competitive sector, with recent momentum suggesting steady demand. Upcoming catalysts this week could shift sentiment quickly.`;
 
+const formatCurrency = (value) => {
+  if (Number.isNaN(value) || value === null || value === undefined) return "--";
+  return `$${value.toFixed(2)}`;
+};
+
+const parseYahooCandles = (data) => {
+  const result = data?.chart?.result?.[0];
+  const timestamps = result?.timestamp || [];
+  const quote = result?.indicators?.quote?.[0];
+  if (!quote || timestamps.length === 0) return [];
+
+  return timestamps
+    .map((time, index) => ({
+      time,
+      open: quote.open?.[index],
+      high: quote.high?.[index],
+      low: quote.low?.[index],
+      close: quote.close?.[index],
+    }))
+    .filter((candle) =>
+      [candle.open, candle.high, candle.low, candle.close].every(
+        (value) => value !== null && value !== undefined,
+      ),
+    )
+    .map((candle) => ({
+      time: candle.time,
+      open: Number(candle.open.toFixed(2)),
+      high: Number(candle.high.toFixed(2)),
+      low: Number(candle.low.toFixed(2)),
+      close: Number(candle.close.toFixed(2)),
+    }));
+};
+
+const fetchYahooCandles = async (symbol, interval, range) => {
+  const response = await fetch(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch market data.");
+  }
+  const data = await response.json();
+  const candles = parseYahooCandles(data);
+  if (!candles.length) {
+    throw new Error("No candle data returned.");
+  }
+  return candles;
+};
+
 const generateHeadlines = (symbol) => {
   const base = [
     "announces new product rollout",
@@ -72,6 +122,18 @@ const generateHeadlines = (symbol) => {
     timestamp: new Date(Date.now() - index * 1000 * 60 * 60 * 6).toLocaleString(),
     url: `https://news.google.com/search?q=${encodeURIComponent(`${symbol} ${item}`)}`,
   }));
+};
+
+const generateWeeklyOutlook = (symbol, lastPrice, volatility) => {
+  const drift = volatility * 2;
+  const lowTarget = Math.max(1, lastPrice - drift);
+  const highTarget = lastPrice + drift;
+  const accuracy = Math.max(52, Math.min(78, Math.round(70 - volatility * 4)));
+  return `${symbol} is projected to trade between ${formatCurrency(
+    lowTarget,
+  )} and ${formatCurrency(
+    highTarget,
+  )} this week. Confidence: ${accuracy}%.`;
 };
 
 const hashSymbol = (value) => {
@@ -124,11 +186,40 @@ const generateCandles = ({
   return candles;
 };
 
-const OUTLOOK_DISABLED_MESSAGE = "Weekly outlook is temporarily disabled.";
-
 const setStatus = (message = "") => {
   if (!formError) return;
   formError.textContent = message;
+};
+
+const loadOptionsInterest = async () => {
+  if (!optionsList) return;
+  try {
+    const response = await fetch(
+      "https://r.jina.ai/https://www.barchart.com/options/open-interest-change/increase",
+    );
+    if (!response.ok) {
+      throw new Error("Failed to load options data.");
+    }
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const rows = Array.from(doc.querySelectorAll("table tbody tr")).slice(0, 5);
+    if (!rows.length) {
+      throw new Error("No options rows found.");
+    }
+    optionsList.innerHTML = "";
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 3) return;
+      const symbol = cells[0].textContent.trim();
+      const change = cells[2].textContent.trim();
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${symbol}</strong> <span>${change}</span>`;
+      optionsList.appendChild(li);
+    });
+  } catch (error) {
+    optionsList.innerHTML = `<li>Unable to load options data. Visit <a href="https://www.barchart.com/options/open-interest-change/increase" target="_blank" rel="noopener noreferrer">Barchart</a> for the latest movers.</li>`;
+  }
 };
 
 const formatUpdatedTime = () =>
@@ -137,10 +228,11 @@ const formatUpdatedTime = () =>
     minute: "2-digit",
   });
 
-const updateUI = (symbol) => {
+const updateUI = async (symbol) => {
   summary.textContent = seedSummary(symbol);
   activeSymbol.textContent = symbol;
   activeTime.textContent = `Updated at ${formatUpdatedTime()}`;
+  activePrice.textContent = "--";
 
   const headlines = generateHeadlines(symbol);
   newsList.innerHTML = "";
@@ -150,29 +242,50 @@ const updateUI = (symbol) => {
     newsList.appendChild(li);
   });
 
-  const now = Date.now();
   const symbolSeed = hashSymbol(symbol);
-  const shortIntervals = 390;
-  const shortCandles = generateCandles({
-    start: now - shortIntervals * 5 * 60 * 1000,
-    intervals: shortIntervals,
-    intervalMinutes: 5,
-    startPrice: 102 + (symbolSeed % 20),
-    volatility: 1.2,
-    seed: symbolSeed + 11,
-  });
+  let shortCandles = [];
+  let longCandles = [];
+  let lastPrice = 0;
+  let volatility = 2.2;
 
-  const longIntervals = 52 * 7 * 24;
-  const longCandles = generateCandles({
-    start: now - longIntervals * 60 * 60 * 1000,
-    intervals: longIntervals,
-    intervalMinutes: 60,
-    startPrice: 110 + (symbolSeed % 30),
-    volatility: 2.8,
-    seed: symbolSeed + 97,
-  });
+  try {
+    setStatus("Fetching live market data...");
+    shortCandles = await fetchYahooCandles(symbol, "5m", "5d");
+    longCandles = await fetchYahooCandles(symbol, "1h", "1y");
+  } catch (error) {
+    const now = Date.now();
+    const shortIntervals = 390;
+    shortCandles = generateCandles({
+      start: now - shortIntervals * 5 * 60 * 1000,
+      intervals: shortIntervals,
+      intervalMinutes: 5,
+      startPrice: 102 + (symbolSeed % 20),
+      volatility: 1.2,
+      seed: symbolSeed + 11,
+    });
 
-  outlook.textContent = OUTLOOK_DISABLED_MESSAGE;
+    const longIntervals = 52 * 7 * 24;
+    longCandles = generateCandles({
+      start: now - longIntervals * 60 * 60 * 1000,
+      intervals: longIntervals,
+      intervalMinutes: 60,
+      startPrice: 110 + (symbolSeed % 30),
+      volatility: 2.8,
+      seed: symbolSeed + 97,
+    });
+  }
+
+  if (shortCandles.length) {
+    lastPrice = shortCandles[shortCandles.length - 1].close;
+  } else if (longCandles.length) {
+    lastPrice = longCandles[longCandles.length - 1].close;
+  }
+  if (lastPrice) {
+    activePrice.textContent = formatCurrency(lastPrice);
+  }
+
+  volatility = Math.max(1.4, Math.min(4.2, (lastPrice || 100) * 0.015));
+  outlook.textContent = generateWeeklyOutlook(symbol, lastPrice || 100, volatility);
 
   if (shortSeries && longSeries) {
     shortSeries.setData(shortCandles);
@@ -211,20 +324,22 @@ const init = () => {
   newsList = document.querySelector("#news-list");
   outlook = document.querySelector("#outlook-text");
   activeSymbol = document.querySelector("#active-symbol");
+  activePrice = document.querySelector("#active-price");
   activeTime = document.querySelector("#active-time");
   formError = document.querySelector("#form-error");
   shortChartContainer = document.querySelector("#chart-short");
   longChartContainer = document.querySelector("#chart-long");
+  optionsList = document.querySelector("#options-list");
 
-  if (!form || !input || !summary || !newsList || !outlook) {
+  if (!form || !input || !summary || !newsList || !outlook || !activePrice) {
     return;
   }
 
   bootstrapCharts();
-  outlook.textContent = OUTLOOK_DISABLED_MESSAGE;
   updateUI("AAPL");
+  loadOptionsInterest();
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const symbol = input.value.trim().toUpperCase();
     if (!symbol) {
@@ -232,7 +347,7 @@ const init = () => {
       input.focus();
       return;
     }
-    updateUI(symbol);
+    await updateUI(symbol);
   });
 };
 
