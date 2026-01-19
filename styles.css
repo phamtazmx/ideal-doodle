@@ -95,13 +95,6 @@ button:hover {
   background: #60a5fa;
 }
 
-.form-error {
-  min-height: 18px;
-  margin: 0;
-  font-size: 12px;
-  color: #fca5a5;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -127,25 +120,6 @@ button:hover {
   margin: 0;
   line-height: 1.6;
   color: #e0e7ff;
-}
-
-.symbol-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-weight: 600;
-  color: #e0e7ff;
-}
-
-#active-symbol {
-  font-size: 28px;
-  letter-spacing: 0.08em;
-}
-
-#active-time {
-  font-size: 13px;
-  font-weight: 400;
-  color: #93c5fd;
 }
 
 .news-list {

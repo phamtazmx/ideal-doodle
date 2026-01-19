@@ -23,19 +23,11 @@
             <span>Stock symbol</span>
             <input id="symbol-input" name="symbol" placeholder="e.g., AAPL" required />
           </label>
-          <p class="form-error" id="form-error" role="status" aria-live="polite"></p>
           <button type="submit">Load insight</button>
         </form>
       </header>
 
       <section class="grid">
-        <article class="card" aria-live="polite">
-          <h2>Active symbol</h2>
-          <div class="symbol-meta">
-            <span id="active-symbol">AAPL</span>
-            <span id="active-time">Updated just now</span>
-          </div>
-        </article>
         <article class="card" aria-live="polite">
           <h2>Company summary</h2>
           <p id="summary-text" class="summary">
