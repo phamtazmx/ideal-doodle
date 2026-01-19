@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Stock Snapshot</title>
+    <link rel="stylesheet" href="styles.css?v=2" />
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Market Intel</p>
+          <h1>Stock Snapshot</h1>
+          <p class="subhead">
+            Enter a symbol to review a concise company summary, recent headlines, price outlook, and
+            short/long-range candlestick charts.
+          </p>
+        </div>
+        <form class="symbol-form" id="symbol-form">
+          <label class="field">
+            <span>Stock symbol</span>
+            <input id="symbol-input" name="symbol" placeholder="e.g., AAPL" required />
+          </label>
+          <p class="form-error" id="form-error" role="status" aria-live="polite"></p>
+          <button type="submit">Load insight</button>
+        </form>
+      </header>
+
+      <section class="grid">
+        <article class="card" aria-live="polite">
+          <h2>Active symbol</h2>
+          <div class="symbol-meta">
+            <span id="active-symbol">AAPL</span>
+            <span id="active-time">Updated just now</span>
+          </div>
+        </article>
+        <article class="card" aria-live="polite">
+          <h2>Company summary</h2>
+          <p id="summary-text" class="summary">
+            Submit a symbol to see a three-sentence snapshot of the company and its current market
+            position.
+          </p>
+        </article>
+
+        <article class="card" aria-live="polite">
+          <h2>Top 5 recent news</h2>
+          <ul id="news-list" class="news-list">
+            <li>Enter a symbol to load the five most recent headlines.</li>
+          </ul>
+        </article>
+
+        <article class="card" aria-live="polite">
+          <h2>Weekly outlook</h2>
+          <p id="outlook-text" class="outlook">
+            We will highlight the most likely price direction for this week based on recent
+            performance once data is loaded.
+          </p>
+        </article>
+      </section>
+
+      <section class="charts">
+        <article class="card">
+          <div class="chart-header">
+            <h2>Last 5 trading days</h2>
+            <p>5-minute candlesticks</p>
+          </div>
+          <div id="chart-short" class="chart"></div>
+        </article>
+
+        <article class="card">
+          <div class="chart-header">
+            <h2>Last 52 weeks</h2>
+            <p>1-hour candlesticks</p>
+          </div>
+          <div id="chart-long" class="chart"></div>
+        </article>
+      </section>
+
+      <section class="note">
+        <p>
+          This demo uses generated data. Connect your preferred market data API inside
+          <code>app.js</code> to populate live summaries, headlines, and prices.
+        </p>
+      </section>
+    </main>
+
+    <script src="app.js?v=2"></script>
+  </body>
+</html>
