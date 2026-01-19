@@ -126,6 +126,8 @@ const updateUI = (symbol) => {
   summary.textContent = seedSummary(symbol);
   activeSymbol.textContent = symbol;
   activeTime.textContent = `Updated at ${formatUpdatedTime()}`;
+const updateUI = (symbol) => {
+  summary.textContent = seedSummary(symbol);
 
   const headlines = generateHeadlines(symbol);
   newsList.innerHTML = "";
@@ -180,5 +182,6 @@ form.addEventListener("submit", (event) => {
     input.focus();
     return;
   }
+  if (!symbol) return;
   updateUI(symbol);
 });
