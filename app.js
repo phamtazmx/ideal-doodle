@@ -70,7 +70,26 @@ const generateHeadlines = (symbol) => {
   return base.map((item, index) => ({
     title: `${symbol} ${item}`,
     timestamp: new Date(Date.now() - index * 1000 * 60 * 60 * 6).toLocaleString(),
+    url: `https://news.google.com/search?q=${encodeURIComponent(`${symbol} ${item}`)}`,
   }));
+};
+
+const hashSymbol = (value) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const createSeededRandom = (seed) => {
+  let state = seed % 2147483647;
+  if (state <= 0) state += 2147483646;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
 };
 
 const generateCandles = ({
@@ -79,17 +98,19 @@ const generateCandles = ({
   intervalMinutes,
   startPrice,
   volatility,
+  seed,
 }) => {
   const candles = [];
   let lastClose = startPrice;
+  const random = createSeededRandom(seed);
 
   for (let i = 0; i < intervals; i += 1) {
     const time = Math.floor((start + i * intervalMinutes * 60 * 1000) / 1000);
     const open = lastClose;
-    const change = (Math.random() - 0.45) * volatility;
+    const change = (random() - 0.45) * volatility;
     const close = Math.max(1, open + change);
-    const high = Math.max(open, close) + Math.random() * volatility * 0.4;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.4;
+    const high = Math.max(open, close) + random() * volatility * 0.4;
+    const low = Math.min(open, close) - random() * volatility * 0.4;
     candles.push({
       time,
       open: Number(open.toFixed(2)),
@@ -125,25 +146,30 @@ const updateUI = (symbol) => {
   newsList.innerHTML = "";
   headlines.forEach((headline) => {
     const li = document.createElement("li");
-    li.innerHTML = `<strong>${headline.title}</strong><br /><span>${headline.timestamp}</span>`;
+    li.innerHTML = `<a href="${headline.url}" target="_blank" rel="noopener noreferrer"><strong>${headline.title}</strong></a><br /><span>${headline.timestamp}</span>`;
     newsList.appendChild(li);
   });
 
   const now = Date.now();
+  const symbolSeed = hashSymbol(symbol);
+  const shortIntervals = 390;
   const shortCandles = generateCandles({
-    start: now - 1000 * 60 * 60 * 24 * 5,
-    intervals: 390,
+    start: now - shortIntervals * 5 * 60 * 1000,
+    intervals: shortIntervals,
     intervalMinutes: 5,
-    startPrice: 102 + Math.random() * 20,
+    startPrice: 102 + (symbolSeed % 20),
     volatility: 1.2,
+    seed: symbolSeed + 11,
   });
 
+  const longIntervals = 52 * 7 * 24;
   const longCandles = generateCandles({
-    start: now - 1000 * 60 * 60 * 24 * 365,
-    intervals: 1700,
+    start: now - longIntervals * 60 * 60 * 1000,
+    intervals: longIntervals,
     intervalMinutes: 60,
-    startPrice: 110 + Math.random() * 30,
+    startPrice: 110 + (symbolSeed % 30),
     volatility: 2.8,
+    seed: symbolSeed + 97,
   });
 
   outlook.textContent = OUTLOOK_DISABLED_MESSAGE;
