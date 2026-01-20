@@ -126,7 +126,7 @@ button:hover {
 .outlook {
   margin: 0;
   line-height: 1.6;
-color: #e0e7ff;
+  color: #e0e7ff;
 }
 
 .outlook--disabled {
@@ -145,6 +145,12 @@ color: #e0e7ff;
 #active-symbol {
   font-size: 28px;
   letter-spacing: 0.08em;
+}
+
+#active-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #c7d2fe;
 }
 
 #active-price {

@@ -4,6 +4,7 @@ let summary;
 let newsList;
 let outlook;
 let activeSymbol;
+let activeName;
 let activePrice;
 let activeTime;
 let formError;
@@ -57,21 +58,33 @@ const buildChart = (container) => {
   return { chart, series };
 };
 
-const seedSummary = (symbol) =>
-  `${symbol} is seeing heightened interest from investors as it balances near-term execution with long-term growth initiatives. The company is positioned in a competitive sector, with recent momentum suggesting steady demand. Upcoming catalysts this week could shift sentiment quickly.`;
+const fallbackSummary = (symbol) =>
+  `No detailed company summary is available for ${symbol} right now. Check back later or connect a market data provider for enriched profiles.`;
 
 const formatCurrency = (value) => {
   if (Number.isNaN(value) || value === null || value === undefined) return "--";
   return `$${value.toFixed(2)}`;
 };
 
+const formatUpdatedTimestamp = (epochSeconds) => {
+  const date = epochSeconds ? new Date(epochSeconds * 1000) : new Date();
+  return date.toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const parseYahooCandles = (data) => {
   const result = data?.chart?.result?.[0];
   const timestamps = result?.timestamp || [];
   const quote = result?.indicators?.quote?.[0];
+  const meta = result?.meta || null;
   if (!quote || timestamps.length === 0) return [];
 
-  return timestamps
+  const candles = timestamps
     .map((time, index) => ({
       time,
       open: quote.open?.[index],
@@ -91,6 +104,8 @@ const parseYahooCandles = (data) => {
       low: Number(candle.low.toFixed(2)),
       close: Number(candle.close.toFixed(2)),
     }));
+
+  return { candles, meta };
 };
 
 const fetchYahooCandles = async (symbol, interval, range) => {
@@ -101,14 +116,34 @@ const fetchYahooCandles = async (symbol, interval, range) => {
     throw new Error("Failed to fetch market data.");
   }
   const data = await response.json();
-  const candles = parseYahooCandles(data);
-  if (!candles.length) {
+  const parsed = parseYahooCandles(data);
+  if (!parsed?.candles?.length) {
     throw new Error("No candle data returned.");
   }
-  return candles;
+  return parsed;
 };
 
-const generateHeadlines = (symbol) => {
+const fetchCompanyProfile = async (symbol) => {
+  const response = await fetch(
+    `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(
+      symbol,
+    )}?modules=assetProfile,price`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch company profile.");
+  }
+  const data = await response.json();
+  const result = data?.quoteSummary?.result?.[0];
+  const name =
+    result?.price?.longName ||
+    result?.price?.shortName ||
+    result?.price?.displayName ||
+    symbol;
+  const summary = result?.assetProfile?.longBusinessSummary || "";
+  return { name, summary };
+};
+
+const generateHeadlines = (symbol, companyName = "") => {
   const base = [
     "announces new product rollout",
     "reports stronger-than-expected demand",
@@ -120,7 +155,9 @@ const generateHeadlines = (symbol) => {
   return base.map((item, index) => ({
     title: `${symbol} ${item}`,
     timestamp: new Date(Date.now() - index * 1000 * 60 * 60 * 6).toLocaleString(),
-    url: `https://news.google.com/search?q=${encodeURIComponent(`${symbol} ${item}`)}`,
+    url: `https://news.google.com/search?q=${encodeURIComponent(
+      `${symbol} ${companyName} ${item}`.trim(),
+    )}`,
   }));
 };
 
@@ -222,19 +259,26 @@ const loadOptionsInterest = async () => {
   }
 };
 
-const formatUpdatedTime = () =>
-  new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
 const updateUI = async (symbol) => {
-  summary.textContent = seedSummary(symbol);
   activeSymbol.textContent = symbol;
-  activeTime.textContent = `Updated at ${formatUpdatedTime()}`;
+  activeName.textContent = "Loading company...";
+  activeTime.textContent = "Fetching latest data...";
   activePrice.textContent = "--";
 
-  const headlines = generateHeadlines(symbol);
+  let companyName = symbol;
+  let companySummary = "";
+  try {
+    const profile = await fetchCompanyProfile(symbol);
+    companyName = profile.name;
+    companySummary = profile.summary;
+  } catch (error) {
+    companySummary = "";
+  }
+
+  activeName.textContent = companyName;
+  summary.textContent = companySummary || fallbackSummary(symbol);
+
+  const headlines = generateHeadlines(symbol, companyName);
   newsList.innerHTML = "";
   headlines.forEach((headline) => {
     const li = document.createElement("li");
@@ -247,12 +291,26 @@ const updateUI = async (symbol) => {
   let longCandles = [];
   let lastPrice = 0;
   let volatility = 2.2;
+  let marketTime = null;
 
   try {
     setStatus("Fetching live market data...");
-    shortCandles = await fetchYahooCandles(symbol, "5m", "5d");
-    longCandles = await fetchYahooCandles(symbol, "1h", "1y");
+    const shortData = await fetchYahooCandles(symbol, "5m", "5d");
+    const longData = await fetchYahooCandles(symbol, "1h", "1y");
+    shortCandles = shortData.candles;
+    longCandles = longData.candles;
+    lastPrice =
+      shortData.meta?.regularMarketPrice ||
+      longData.meta?.regularMarketPrice ||
+      0;
+    marketTime =
+      shortData.meta?.regularMarketTime ||
+      longData.meta?.regularMarketTime ||
+      null;
   } catch (error) {
+    setStatus(
+      "Live market data unavailable (invalid symbol or CORS restriction). Showing sample data.",
+    );
     const now = Date.now();
     const shortIntervals = 390;
     shortCandles = generateCandles({
@@ -275,14 +333,15 @@ const updateUI = async (symbol) => {
     });
   }
 
-  if (shortCandles.length) {
+  if (!lastPrice && shortCandles.length) {
     lastPrice = shortCandles[shortCandles.length - 1].close;
-  } else if (longCandles.length) {
+  } else if (!lastPrice && longCandles.length) {
     lastPrice = longCandles[longCandles.length - 1].close;
   }
   if (lastPrice) {
     activePrice.textContent = formatCurrency(lastPrice);
   }
+  activeTime.textContent = `Updated ${formatUpdatedTimestamp(marketTime)}`;
 
   volatility = Math.max(1.4, Math.min(4.2, (lastPrice || 100) * 0.015));
   outlook.textContent = generateWeeklyOutlook(symbol, lastPrice || 100, volatility);
@@ -291,7 +350,9 @@ const updateUI = async (symbol) => {
     shortSeries.setData(shortCandles);
     longSeries.setData(longCandles);
   }
-  setStatus("");
+  if (!formError?.textContent?.includes("Live market data unavailable")) {
+    setStatus("");
+  }
 };
 
 const bootstrapCharts = () => {
@@ -324,6 +385,7 @@ const init = () => {
   newsList = document.querySelector("#news-list");
   outlook = document.querySelector("#outlook-text");
   activeSymbol = document.querySelector("#active-symbol");
+  activeName = document.querySelector("#active-name");
   activePrice = document.querySelector("#active-price");
   activeTime = document.querySelector("#active-time");
   formError = document.querySelector("#form-error");
@@ -331,12 +393,11 @@ const init = () => {
   longChartContainer = document.querySelector("#chart-long");
   optionsList = document.querySelector("#options-list");
 
-  if (!form || !input || !summary || !newsList || !outlook || !activePrice) {
+  if (!form || !input || !summary || !newsList || !outlook || !activePrice || !activeName) {
     return;
   }
 
   bootstrapCharts();
-  updateUI("AAPL");
   loadOptionsInterest();
 
   form.addEventListener("submit", async (event) => {
