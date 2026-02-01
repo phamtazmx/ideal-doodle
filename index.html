@@ -6,99 +6,125 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Stock Snapshot</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <title>Fresh Start Studio</title>
+    <link rel="stylesheet" href="styles.css?v=4" />
   </head>
   <body>
     <main class="page">
-      <header class="header">
+      <header class="hero">
         <div>
-          <p class="eyebrow">Market Intel</p>
-          <h1>Stock Snapshot</h1>
+          <p class="eyebrow">New project kickoff</p>
+          <h1>Fresh Start Studio</h1>
           <p class="subhead">
-            Enter a symbol to review a concise company summary, recent headlines, price outlook, and
-            short/long-range candlestick charts.
+            A clean workspace to reset priorities, capture ideas, and move the next sprint
+            forward.
           </p>
         </div>
-        <form class="symbol-form" id="symbol-form">
-          <label class="field">
-            <span>Stock symbol</span>
-            <input id="symbol-input" name="symbol" placeholder="e.g., AAPL" required />
-          </label>
-          <p class="form-error" id="form-error" role="status" aria-live="polite"></p>
-          <button type="submit">Load insight</button>
-        </form>
+        <div class="hero-card">
+          <h2>Today’s focus</h2>
+          <p class="hero-stat" id="focus-count">0</p>
+          <p class="hero-meta">Tasks queued for your sprint board.</p>
+        </div>
       </header>
 
-      <section class="grid">
-        <article class="card" aria-live="polite">
-          <h2>Active symbol</h2>
-          <div class="symbol-meta">
-            <span id="active-symbol">--</span>
-            <span id="active-name">Company name</span>
-            <span id="active-price">--</span>
-            <span id="active-time">Awaiting symbol</span>
-          </div>
-        </article>
-        <article class="card" aria-live="polite">
-          <h2>Company summary</h2>
-          <p id="summary-text" class="summary">
-            Submit a symbol to see the latest company overview.
+      <section class="planner">
+        <div>
+          <h2>Create a new task</h2>
+          <p class="section-subhead">
+            Add a quick note, assign a lane, and set an optional due date to keep the momentum
+            visible.
           </p>
-        </article>
+        </div>
+        <form class="task-form" id="task-form">
+          <label class="field">
+            <span>Task name</span>
+            <input id="task-input" name="task" placeholder="e.g., Draft project brief" required />
+          </label>
+          <label class="field">
+            <span>Lane</span>
+            <select id="lane-select" name="lane">
+              <option value="ideas">Ideas</option>
+              <option value="progress">In progress</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Target date</span>
+            <input id="date-input" name="date" type="date" />
+          </label>
+          <p class="form-error" id="form-error" role="status" aria-live="polite"></p>
+          <button type="submit">Add to board</button>
+        </form>
+      </section>
 
-        <article class="card" aria-live="polite">
-          <h2>Top 5 recent news</h2>
-          <ul id="news-list" class="news-list">
-            <li>Enter a symbol to load the five most recent headlines.</li>
+      <section class="board">
+        <article class="lane">
+          <header>
+            <h3>Ideas</h3>
+            <span class="badge" id="count-ideas">0</span>
+          </header>
+          <ul class="lane-list" id="ideas-list">
+            <li>
+              <strong>Reset branding moodboard</strong>
+              <span>Collect fresh visuals for the new identity.</span>
+            </li>
+            <li>
+              <strong>Outline onboarding emails</strong>
+              <span>Draft a 3-touch welcome sequence.</span>
+            </li>
           </ul>
         </article>
 
-        <article class="card" aria-live="polite">
-          <h2>Weekly outlook</h2>
-          <p id="outlook-text" class="outlook">
-            Enter a symbol to see the projected trading range and confidence for the week ahead.
-          </p>
+        <article class="lane">
+          <header>
+            <h3>In progress</h3>
+            <span class="badge" id="count-progress">0</span>
+          </header>
+          <ul class="lane-list" id="progress-list">
+            <li>
+              <strong>Scope MVP deliverables</strong>
+              <span>Clarify the must-haves for launch.</span>
+            </li>
+            <li>
+              <strong>Align weekly check-ins</strong>
+              <span>Set owners, cadence, and agenda.</span>
+            </li>
+          </ul>
         </article>
 
-        <article class="card" aria-live="polite">
-          <h2>Options interest</h2>
-          <p class="card-subhead">
-            Open interest increases (source: <a href="https://www.barchart.com/options/open-interest-change/increase" target="_blank" rel="noopener noreferrer">Barchart</a>)
-          </p>
-          <ul id="options-list" class="options-list">
-            <li>Loading open interest movers...</li>
+        <article class="lane">
+          <header>
+            <h3>Done</h3>
+            <span class="badge" id="count-done">0</span>
+          </header>
+          <ul class="lane-list" id="done-list">
+            <li>
+              <strong>Archive previous roadmap</strong>
+              <span>Close out Q2 planning docs.</span>
+            </li>
           </ul>
         </article>
       </section>
 
-      <section class="charts">
-        <article class="card">
-          <div class="chart-header">
-            <h2>Last 5 trading days</h2>
-            <p>5-minute candlesticks</p>
-          </div>
-          <div id="chart-short" class="chart"></div>
+      <section class="summary">
+        <article class="summary-card">
+          <h2>Momentum checklist</h2>
+          <ul>
+            <li>Set a north-star goal for the next 30 days.</li>
+            <li>Identify the single biggest risk to mitigate.</li>
+            <li>Confirm who owns approvals and timelines.</li>
+          </ul>
         </article>
-
-        <article class="card">
-          <div class="chart-header">
-            <h2>Last 52 weeks</h2>
-            <p>1-hour candlesticks</p>
-          </div>
-          <div id="chart-long" class="chart"></div>
+        <article class="summary-card">
+          <h2>Quick wins</h2>
+          <p>
+            Pair each large milestone with a 48-hour deliverable. The small wins keep energy high
+            and surface blockers early.
+          </p>
         </article>
-      </section>
-
-      <section class="note">
-        <p>
-          This demo uses generated data. Connect your preferred market data API inside
-          <code>app.js</code> to populate live summaries, headlines, and prices.
-        </p>
       </section>
     </main>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>
